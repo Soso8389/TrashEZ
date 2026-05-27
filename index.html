@@ -163,7 +163,7 @@
     </ul>
     
     
-    <div id="popup">ß
+    <div id="popup">
    </div>
   
   
@@ -203,27 +203,23 @@
     // take a picture and send it to the server
     async function scan() {
 
-      // make a small picture from the camera
+      // make a square picture from the camera
       const canvas = document.createElement("canvas");
       canvas.width = 512;
-      popup.innerHTML = `
-     <div>${result.item} → ${result.bin.toUpperCase()}</div>
-     <div style="margin-top: 20px; font-size: 16px;">${result.reason}</div>
-     <div style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
-     <button onclick="rateCorrect()" style="font-size: 40px; background: none; border: none; cursor: pointer;">👍</button>
-     <button onclick="rateWrong('${result.item}', '${result.bin}')" style="font-size: 40px; background: none; border: none; cursor: pointer;">👎</button>
-     </div>`;
-
+      canvas.height = 512;
       canvas.getContext("2d").drawImage(camera, 0, 0, canvas.width, canvas.height);
 
       // turn the picture into text we can send
       const base64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
 
-      // send the picture to the server
+      // get any saved correction rules the user has made
+      const rules = localStorage.getItem("sortingRules") || "[]";
+
+      // send the picture (and rules) to the server
       const response = await fetch("https://web-production-6ff8d.up.railway.app/classify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64 })
+        body: JSON.stringify({ image: base64, rules: rules })
       });
 
       const result = await response.json();
@@ -236,22 +232,26 @@
         "E-waste": "#FF0000"
       };
 
-        const popup = document.getElementById("popup");
+      const popup = document.getElementById("popup");
 
-          if (result.bin === "unknown") {
-            new Audio("unidentified.mp3").play();
-            popup.style.background = "#333";
-            popup.textContent = "Unidentified item — please try again!";
-          }
-        else {
-          new Audio(result.bin + ".mp3").play();
-          popup.style.background = colors[result.bin];
-          popup.textContent = `${result.item} → ${result.bin.toUpperCase()}\n${result.reason}`;
-          }
+      if (result.bin === "unknown") {
+        new Audio("unidentified.mp3").play();
+        popup.style.background = "#333";
+        popup.textContent = "Unidentified item — please try again!";
+      } else {
+        new Audio(result.bin + ".mp3").play();
+        popup.style.background = colors[result.bin];
+        popup.innerHTML = `
+          <div>${result.item} → ${result.bin.toUpperCase()}</div>
+          <div style="margin-top: 20px; font-size: 16px;">${result.reason}</div>
+          <div style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
+            <button onclick="rateCorrect()" style="font-size: 40px; background: none; border: none; cursor: pointer;">👍</button>
+            <button onclick="rateWrong('${result.item}', '${result.bin}')" style="font-size: 40px; background: none; border: none; cursor: pointer;">👎</button>
+          </div>`;
+      }
 
-          popup.classList.add("show");
+      popup.classList.add("show");
 
-        
     }
    if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
