@@ -23,18 +23,8 @@ def classify():
     if request.method == "OPTIONS":
         return "", 204, headers
 
-    # get the picture and the user's saved rules from the webpage
-    data = request.get_json()
-    image = data["image"]
-    rules = data.get("rules", "[]")
-
-    # build the prompt, adding the user's past corrections if any
-    prompt = 'Which bin does this go in? Bins: trash, recycling, compost, E-waste. Take your time to carefully analyze the item. Look closely at the material — identify whether it is plastic, metal, glass, paper, cardboard, styrofoam, organic waste, etc. Be especially careful: styrofoam is NOT recyclable and should go in trash. Make your best guess about what the item is and which bin it belongs in, but maintain a high confidence threshold — aim for 100% certainty. If you are not sufficiently confident in your classification, return "unknown" instead of guessing. Only classify if you are fairly sure.'
-
-    if rules and rules != "[]":
-        prompt += f'\n\nIMPORTANT: The user has corrected past mistakes. Use these corrections as strong guidance:\n{rules}'
-
-    prompt += '\n\nReply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence> explaining why it goes in that bin"}'
+    # get the picture from the webpage
+    image = request.get_json()["image"]
 
     # ask Claude what bin it goes in
     message = client.messages.create(
@@ -53,7 +43,7 @@ def classify():
                 },
                 {
                     "type": "text",
-                    "text": prompt
+                    "text": 'Which bin does this go in? Bins: trash, recycling, compost, E-waste. You must be 100% certain of both what the item is AND which bin it belongs in. If there is ANY doubt — the image is unclear, the item is ambiguous, or you are not completely sure of the correct bin — you MUST set bin to "unknown". Do not guess. Only classify if you are absolutely certain. Reply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence> explaining why it goes in that bin"}'
                 }
             ]
         }]
