@@ -206,7 +206,14 @@
       // make a small picture from the camera
       const canvas = document.createElement("canvas");
       canvas.width = 512;
-      canvas.height = Math.round(camera.videoHeight * (512 / camera.videoWidth));
+      popup.innerHTML = `
+     <div>${result.item} → ${result.bin.toUpperCase()}</div>
+     <div style="margin-top: 20px; font-size: 16px;">${result.reason}</div>
+     <div style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
+     <button onclick="rateCorrect()" style="font-size: 40px; background: none; border: none; cursor: pointer;">👍</button>
+     <button onclick="rateWrong('${result.item}', '${result.bin}')" style="font-size: 40px; background: none; border: none; cursor: pointer;">👎</button>
+     </div>`;
+
       canvas.getContext("2d").drawImage(camera, 0, 0, canvas.width, canvas.height);
 
       // turn the picture into text we can send
@@ -244,13 +251,49 @@
 
           popup.classList.add("show");
 
-          setTimeout(() => {
-          popup.classList.remove("show");
-          }, 3000);
+        
     }
    if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
    }
+
+
+   function rateCorrect() {
+  popup.classList.remove("show");
+  }
+
+  function rateWrong(item, claudeBin) {
+  popup.style.background = "#333";
+  popup.innerHTML = `
+    <div>What bin should "${item}" go in?</div>
+    <div style="margin-top: 30px; display: flex; flex-direction: column; gap: 12px;">
+      <button onclick="saveCorrection('${item}', '${claudeBin}', 'trash')"     style="padding: 16px; font-size: 18px; background: #6E6E6E; color: white; border: none; border-radius: 12px;">Trash</button>
+      <button onclick="saveCorrection('${item}', '${claudeBin}', 'recycling')" style="padding: 16px; font-size: 18px; background: #2878FF; color: white; border: none; border-radius: 12px;">Recycling</button>
+      <button onclick="saveCorrection('${item}', '${claudeBin}', 'compost')"   style="padding: 16px; font-size: 18px; background: #3CB44B; color: white; border: none; border-radius: 12px;">Compost</button>
+      <button onclick="saveCorrection('${item}', '${claudeBin}', 'hazard')"    style="padding: 16px; font-size: 18px; background: red; color: white; border: none; border-radius: 12px;">E-waste</button>
+      <button onclick="popup.classList.remove('show')" style="padding: 12px; font-size: 16px; background: none; color: white; border: 1px solid white; border-radius: 12px; margin-top: 12px;">Cancel</button>
+    </div>
+  `;
+}
+
+function saveCorrection(item, claudeBin, correctBin) {
+
+  // get existing rules from storage (or start with empty array)
+  let rules = JSON.parse(localStorage.getItem("sortingRules") || "[]");
+
+  // add the new correction
+  rules.push({
+    item: item,
+    claudeSaid: claudeBin,
+    userSaid: correctBin
+  });
+
+  // save back to storage
+  localStorage.setItem("sortingRules", JSON.stringify(rules));
+
+  console.log("Saved! Total rules:", rules.length);
+  popup.classList.remove("show");
+}
   </script>
 
 </body>
