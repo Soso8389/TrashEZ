@@ -43,7 +43,7 @@ def classify():
                 },
                 {
                     "type": "text",
-                    "text": 'Which bin does this go in? Bins: trash, recycling, compost, E-waste. You must be 100% certain of both what the item is AND which bin it belongs in. If there is ANY doubt — the image is unclear, the item is ambiguous, or you are not completely sure of the correct bin — you MUST set bin to "unknown". Do not guess. Only classify if you are absolutely certain. Reply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence> explaining why it goes in that bin"}'
+                    "text": 'Which bin does this go in? Bins: trash, recycling, compost, E-waste. Make your best guess about what the item is and which bin it belongs in, but maintain a high confidence threshold — aim for 100% certainty. If you are not sufficiently confident in your classification, return "unknown" instead of guessing. Only classify if you are fairly sure. Reply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence> explaining why it goes in that bin"}'
                 }
             ]
         }]
