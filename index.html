@@ -171,130 +171,128 @@
   </div>
 
   <script>
-   async function startScanFlow() {
-    await startCamera();
-    scan();
-   }
 
-    
+  // hide the intro video when it finishes
+  const introVideo = document.getElementById("introVideo");
+  const introOverlay = document.getElementById("introOverlay");
 
-// hide the intro video when it finishes
-    const introVideo = document.getElementById("introVideo");
-    const introOverlay = document.getElementById("introOverlay");
-
-    introVideo.addEventListener("ended", () => {
-      introOverlay.style.display = "none";
-    });
-
-
-    // turn on the camera
-    const camera = document.getElementById("camera");
-
-    async function startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-      });
-      camera.srcObject = stream;
-      await new Promise(resolve => camera.addEventListener("loadedmetadata", resolve, { once: true }));
-
-    }
-
-
-    // take a picture and send it to the server
-    async function scan() {
-
-      // make a square picture from the camera
-      const canvas = document.createElement("canvas");
-      canvas.width = 512;
-      canvas.height = 512;
-      canvas.getContext("2d").drawImage(camera, 0, 0, canvas.width, canvas.height);
-
-      // turn the picture into text we can send
-      const base64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
-
-      // get any saved correction rules the user has made
-      const rules = localStorage.getItem("sortingRules") || "[]";
-
-      // send the picture (and rules) to the server
-      const response = await fetch("https://web-production-6ff8d.up.railway.app/classify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64, rules: rules })
-      });
-
-      const result = await response.json();
-
-      // show the answer
-      const colors = {
-        trash: "#6E6E6E",
-        recycling: "#2878FF",
-        compost: "#3CB44B",
-        "E-waste": "#FF0000"
-      };
-
-      const popup = document.getElementById("popup");
-
-      if (result.bin === "unknown") {
-        new Audio("unidentified.mp3").play();
-        popup.style.background = "#333";
-        popup.textContent = "Unidentified item — please try again!";
-      } else {
-        new Audio(result.bin + ".mp3").play();
-        popup.style.background = colors[result.bin];
-        popup.innerHTML = `
-          <div>${result.item} → ${result.bin.toUpperCase()}</div>
-          <div style="margin-top: 20px; font-size: 16px;">${result.reason}</div>
-          <div style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
-            <button onclick="rateCorrect()" style="font-size: 40px; background: none; border: none; cursor: pointer;">👍</button>
-            <button onclick="rateWrong('${result.item}', '${result.bin}')" style="font-size: 40px; background: none; border: none; cursor: pointer;">👎</button>
-          </div>`;
-      }
-
-      popup.classList.add("show");
-
-    }
-   if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-   }
-
-
-   function rateCorrect() {
-  popup.classList.remove("show");
-  }
-
-  function rateWrong(item, claudeBin) {
-  popup.style.background = "#333";
-  popup.innerHTML = `
-    <div>What bin should "${item}" go in?</div>
-    <div style="margin-top: 30px; display: flex; flex-direction: column; gap: 12px;">
-      <button onclick="saveCorrection('${item}', '${claudeBin}', 'trash')"     style="padding: 16px; font-size: 18px; background: #6E6E6E; color: white; border: none; border-radius: 12px;">Trash</button>
-      <button onclick="saveCorrection('${item}', '${claudeBin}', 'recycling')" style="padding: 16px; font-size: 18px; background: #2878FF; color: white; border: none; border-radius: 12px;">Recycling</button>
-      <button onclick="saveCorrection('${item}', '${claudeBin}', 'compost')"   style="padding: 16px; font-size: 18px; background: #3CB44B; color: white; border: none; border-radius: 12px;">Compost</button>
-      <button onclick="saveCorrection('${item}', '${claudeBin}', 'hazard')"    style="padding: 16px; font-size: 18px; background: red; color: white; border: none; border-radius: 12px;">E-waste</button>
-      <button onclick="popup.classList.remove('show')" style="padding: 12px; font-size: 16px; background: none; color: white; border: 1px solid white; border-radius: 12px; margin-top: 12px;">Cancel</button>
-    </div>
-  `;
-}
-
-function saveCorrection(item, claudeBin, correctBin) {
-
-  // get existing rules from storage (or start with empty array)
-  let rules = JSON.parse(localStorage.getItem("sortingRules") || "[]");
-
-  // add the new correction
-  rules.push({
-    item: item,
-    claudeSaid: claudeBin,
-    userSaid: correctBin
+  introVideo.addEventListener("ended", () => {
+    introOverlay.style.display = "none";
   });
 
-  // save back to storage
-  localStorage.setItem("sortingRules", JSON.stringify(rules));
+  const camera = document.getElementById("camera");
+  const popup = document.getElementById("popup");
 
-  console.log("Saved! Total rules:", rules.length);
-  popup.classList.remove("show");
-}
-  </script>
+
+  async function startScanFlow() {
+    await startCamera();
+    scan();
+  }
+
+
+  async function startCamera() {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+    camera.srcObject = stream;
+    await new Promise(resolve => camera.addEventListener("loadedmetadata", resolve, { once: true }));
+  }
+
+
+  async function scan() {
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    canvas.getContext("2d").drawImage(camera, 0, 0, canvas.width, canvas.height);
+
+    const base64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
+    const rules = localStorage.getItem("sortingRules") || "[]";
+
+    const response = await fetch("https://web-production-6ff8d.up.railway.app/classify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64, rules: rules })
+    });
+
+    const result = await response.json();
+
+    const colors = {
+      trash: "#6E6E6E",
+      recycling: "#2878FF",
+      compost: "#3CB44B",
+      "E-waste": "#FF0000"
+    };
+
+    if (result.bin === "unknown") {
+      new Audio("unidentified.mp3").play();
+      popup.style.background = "#333";
+      popup.innerHTML = `
+        <div>Unidentified item — please try again!</div>
+        <button onclick="closePopup()" style="margin-top: 30px; padding: 12px 30px; font-size: 16px; background: none; color: white; border: 1px solid white; border-radius: 12px;">Close</button>
+      `;
+    } else {
+      new Audio(result.bin + ".mp3").play();
+      popup.style.background = colors[result.bin];
+      popup.innerHTML = `
+        <div>${result.item} → ${result.bin.toUpperCase()}</div>
+        <div style="margin-top: 20px; font-size: 16px;">${result.reason}</div>
+        <div style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
+          <button onclick="rateCorrect()" style="font-size: 40px; background: none; border: none; cursor: pointer;">👍</button>
+          <button onclick="rateWrong('${result.item}', '${result.bin}')" style="font-size: 40px; background: none; border: none; cursor: pointer;">👎</button>
+        </div>
+      `;
+    }
+
+    popup.classList.add("show");
+  }
+
+
+  function closePopup() {
+    popup.classList.remove("show");
+  }
+
+
+  function rateCorrect() {
+    popup.classList.remove("show");
+  }
+
+
+  function rateWrong(item, claudeBin) {
+    popup.style.background = "#333";
+    popup.innerHTML = `
+      <div>What bin should "${item}" go in?</div>
+      <div style="margin-top: 30px; display: flex; flex-direction: column; gap: 12px;">
+        <button onclick="saveCorrection('${item}', '${claudeBin}', 'trash')"     style="padding: 16px; font-size: 18px; background: #6E6E6E; color: white; border: none; border-radius: 12px;">Trash</button>
+        <button onclick="saveCorrection('${item}', '${claudeBin}', 'recycling')" style="padding: 16px; font-size: 18px; background: #2878FF; color: white; border: none; border-radius: 12px;">Recycling</button>
+        <button onclick="saveCorrection('${item}', '${claudeBin}', 'compost')"   style="padding: 16px; font-size: 18px; background: #3CB44B; color: white; border: none; border-radius: 12px;">Compost</button>
+        <button onclick="saveCorrection('${item}', '${claudeBin}', 'E-waste')"   style="padding: 16px; font-size: 18px; background: red; color: white; border: none; border-radius: 12px;">E-waste</button>
+        <button onclick="closePopup()" style="padding: 12px; font-size: 16px; background: none; color: white; border: 1px solid white; border-radius: 12px; margin-top: 12px;">Cancel</button>
+      </div>
+    `;
+  }
+
+
+  function saveCorrection(item, claudeBin, correctBin) {
+    let rules = JSON.parse(localStorage.getItem("sortingRules") || "[]");
+
+    rules.push({
+      item: item,
+      claudeSaid: claudeBin,
+      userSaid: correctBin
+    });
+
+    localStorage.setItem("sortingRules", JSON.stringify(rules));
+    console.log("Saved! Total rules:", rules.length);
+    popup.classList.remove("show");
+  }
+
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
+
+</script>
 
 </body>
 </html>
