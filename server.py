@@ -2,7 +2,6 @@ from flask import Flask, request
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-# load my API key from the .env file
 load_dotenv()
 
 app = Flask(__name__)
@@ -12,23 +11,22 @@ client = Anthropic()
 @app.route("/classify", methods=["POST", "OPTIONS"])
 def classify():
 
-    # headers so the browser lets us talk to this server
+    # these headers let the browser talk to this server from a different domain
     headers = {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS"
     }
 
-    # browser sends a check first before the real request
+    # browsers send a quick check before the real request — just say yes
     if request.method == "OPTIONS":
         return "", 204, headers
 
-    # get the picture and the user's saved rules from the webpage
+    # read the image and any saved user rules from the request
     data = request.get_json()
     image = data["image"]
     rules = data.get("rules", "[]")
 
-    # build the prompt with step-by-step thinking
     prompt = '''Analyze this image step-by-step to classify the waste item.
 
 Step 1: What is the object? Describe its material, shape, condition, and any visible labels.
@@ -58,7 +56,7 @@ Rules:
 
     prompt += '\n\nReply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence> explaining why it goes in that bin"}'
 
-    # ask Claude what bin it goes in
+    # send the image and prompt to Claude and get back a bin classification
     message = client.messages.create(
         model="claude-haiku-4-5",
         max_tokens=300,
@@ -81,10 +79,9 @@ Rules:
         }]
     )
 
-    # clean up Claude's answer
     result = message.content[0].text.strip()
 
-    # sometimes Claude wraps the answer in ``` so we remove that
+    # Claude sometimes wraps the JSON in triple backticks — remove them if so
     if result.startswith("```"):
         result = result.strip("`")
         if result.startswith("json"):
@@ -94,6 +91,5 @@ Rules:
     return result, 200, headers
 
 
-# start the server
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
