@@ -23,13 +23,45 @@ def classify():
     if request.method == "OPTIONS":
         return "", 204, headers
 
-    # get the picture from the webpage
-    image = request.get_json()["image"]
+    # get the picture and the user's saved rules from the webpage
+    data = request.get_json()
+    image = data["image"]
+    rules = data.get("rules", "[]")
+
+    # build the prompt with step-by-step thinking
+    prompt = '''Analyze this image step-by-step to classify the waste item.
+
+Step 1: What is the object? Describe its material, shape, condition, and any visible labels.
+
+Step 2: Is the object clean or contaminated with food/liquid?
+
+Step 3: What is the primary material (plastic type, metal, glass, paper, food, electronic, mixed)?
+
+Step 4: Based on common municipal waste rules, which bin does it belong in?
+
+Bins:
+- TRASH: styrofoam, plastic bags, plastic wrap, dirty/contaminated paper, ceramics, broken glass, mixed-material packaging
+- RECYCLING: CLEAN paper, CLEAN cardboard, aluminum cans, steel cans, glass bottles/jars, rigid plastic bottles/containers (#1, #2, #5)
+- COMPOST: food scraps, fruit/vegetable peels, coffee grounds, eggshells, yard waste, food-soiled uncoated paper
+- E-WASTE: batteries, electronics, phones, cables, light bulbs, paint, chemicals, aerosol cans
+
+Rules:
+- Be CONSERVATIVE — when unsure between recycling and trash, choose trash to avoid contaminating recycling streams
+- Styrofoam is ALWAYS trash, never recycling
+- Plastic bags are ALWAYS trash, never recycling
+- Dirty pizza boxes go in compost, clean ones in recycling
+- You must be 100% certain of both what the item is AND which bin it belongs in
+- If there is ANY doubt, set bin to "unknown" — do not guess'''
+
+    if rules and rules != "[]":
+        prompt += f'\n\nIMPORTANT: The user has corrected past mistakes. Use these as strong guidance:\n{rules}'
+
+    prompt += '\n\nReply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence> explaining why it goes in that bin"}'
 
     # ask Claude what bin it goes in
     message = client.messages.create(
         model="claude-haiku-4-5",
-        max_tokens=200,
+        max_tokens=300,
         messages=[{
             "role": "user",
             "content": [
@@ -43,7 +75,7 @@ def classify():
                 },
                 {
                     "type": "text",
-                    "text": 'Which bin does this go in? Bins: trash, recycling, compost, E-waste. You must be 100% certain of both what the item is AND which bin it belongs in. If there is ANY doubt — the image is unclear, the item is ambiguous, or you are not completely sure of the correct bin — you MUST set bin to "unknown". Do not guess. Only classify if you are absolutely certain. Reply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence> explaining why it goes in that bin"}'
+                    "text": prompt
                 }
             ]
         }]

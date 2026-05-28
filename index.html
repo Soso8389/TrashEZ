@@ -205,8 +205,8 @@
 
       // make a small picture from the camera
       const canvas = document.createElement("canvas");
-      canvas.width = 512;
-      canvas.height = Math.round(camera.videoHeight * (512 / camera.videoWidth));
+      canvas.width = 1024;
+      canvas.height = Math.round(camera.videoHeight * (1024 / camera.videoWidth));
       canvas.getContext("2d").drawImage(camera, 0, 0, canvas.width, canvas.height);
 
       // turn the picture into text we can send
