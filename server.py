@@ -11,21 +11,17 @@ client = Anthropic()
 @app.route("/classify", methods=["POST", "OPTIONS"])
 def classify():
 
-    # these headers let the browser talk to this server from a different domain
     headers = {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS"
     }
 
-    # browsers send a quick check before the real request — just say yes
     if request.method == "OPTIONS":
         return "", 204, headers
 
-    # read the image and any saved user rules from the request
     data = request.get_json()
     image = data["image"]
-    rules = data.get("rules", "[]")
 
     prompt = '''Analyze this image step-by-step to classify the waste item.
 
@@ -49,14 +45,10 @@ Rules:
 - Plastic bags are ALWAYS trash, never recycling
 - Dirty pizza boxes go in compost, clean ones in recycling
 - You must be 100% certain of both what the item is AND which bin it belongs in
-- If there is ANY doubt, set bin to "unknown" — do not guess'''
+- If there is ANY doubt, set bin to "unknown" — do not guess
 
-    if rules and rules != "[]":
-        prompt += f'\n\nIMPORTANT: The user has corrected past mistakes. Use these as strong guidance:\n{rules}'
+Reply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence>"}'''
 
-    prompt += '\n\nReply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compost|E-waste|unknown", "reason": "<one sentence> explaining why it goes in that bin"}'
-
-    # send the image and prompt to Claude and get back a bin classification
     message = client.messages.create(
         model="claude-haiku-4-5",
         max_tokens=300,
@@ -81,7 +73,6 @@ Rules:
 
     result = message.content[0].text.strip()
 
-    # Claude sometimes wraps the JSON in triple backticks — remove them if so
     if result.startswith("```"):
         result = result.strip("`")
         if result.startswith("json"):
