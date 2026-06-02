@@ -108,24 +108,6 @@
       });
     }
 
-    function findDropoff(item, reason) {
-      navigator.geolocation.getCurrentPosition(async function(pos) {
-
-        var response = await fetch("https://web-production-6ff8d.up.railway.app/dropoff", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        });
-
-        var data = await response.json();
-        var place = data.places[0];
-
-        var message = item + " is E-WASTE. " + reason + "<br><br>Nearest drop-off:<br><strong>" + place.displayName.text + "</strong><br>" + place.formattedAddress + "<br><br><a href='" + place.googleMapsUri + "' target='_blank'>Open in Maps</a>";
-
-        popup.innerHTML = message;
-      });
-    }
-
     async function doScan() {
 
       await startCamera();
@@ -176,10 +158,9 @@
       else if (bin === "E-waste") {
         new Audio("E-waste.mp3").play();
         popup.style.background = "red";
-        popup.innerHTML = item + " is E-WASTE. " + reason + "<br><br>Finding nearest drop-off...";
+        popup.innerHTML = item + " is E-WASTE. " + reason + "<br><br><a href='https://maps.app.goo.gl/zpndSFG22kZaLhHw6' target='_blank'>Find a drop-off location</a>";
         popup.style.display = "block";
         setTimeout(function() { popup.style.display = "none"; }, 15000);
-        findDropoff(item, reason);
       }
 
       else {
