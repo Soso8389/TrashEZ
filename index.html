@@ -70,6 +70,10 @@
       box-sizing: border-box;
     }
 
+    #popup a {
+      color: white;
+    }
+
   </style>
 </head>
 <body>
@@ -93,27 +97,43 @@
 
   <script>
 
-    var cameraVideo = document.getElementById("camera");
+    var camera = document.getElementById("camera");
     var popup = document.getElementById("popup");
 
-    async function turnOnCamera() {
-      var stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-      });
-      cameraVideo.srcObject = stream;
+    async function startCamera() {
+      var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      camera.srcObject = stream;
       await new Promise(function(resolve) {
-        cameraVideo.addEventListener("loadedmetadata", resolve, { once: true });
+        camera.addEventListener("loadedmetadata", resolve, { once: true });
+      });
+    }
+
+    function findDropoff(item, reason) {
+      navigator.geolocation.getCurrentPosition(async function(pos) {
+
+        var response = await fetch("https://web-production-6ff8d.up.railway.app/dropoff", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        });
+
+        var data = await response.json();
+        var place = data.places[0];
+
+        var message = item + " is E-WASTE. " + reason + "<br><br>Nearest drop-off:<br><strong>" + place.displayName.text + "</strong><br>" + place.formattedAddress + "<br><br><a href='" + place.googleMapsUri + "' target='_blank'>Open in Maps</a>";
+
+        popup.innerHTML = message;
       });
     }
 
     async function doScan() {
 
-      await turnOnCamera();
+      await startCamera();
 
       var canvas = document.createElement("canvas");
       canvas.width = 1024;
       canvas.height = 1024;
-      canvas.getContext("2d").drawImage(cameraVideo, 0, 0, 1024, 1024);
+      canvas.getContext("2d").drawImage(camera, 0, 0, 1024, 1024);
 
       var imageData = canvas.toDataURL("image/jpeg", 0.8);
       var base64 = imageData.split(",")[1];
@@ -125,35 +145,50 @@
       });
 
       var result = await response.json();
+      var bin = result.bin;
+      var item = result.item;
+      var reason = result.reason;
 
-      if (result.bin === "trash") {
-        popup.style.background = "#6E6E6E";
+      if (bin === "trash") {
         new Audio("Trash.mp3").play();
-      } else if (result.bin === "recycling") {
-        popup.style.background = "#2878FF";
+        popup.style.background = "#6E6E6E";
+        popup.innerHTML = item + " goes in TRASH. " + reason;
+        popup.style.display = "block";
+        setTimeout(function() { popup.style.display = "none"; }, 7000);
+      }
+
+      else if (bin === "recycling") {
         new Audio("Recycling.mp3").play();
-      } else if (result.bin === "compost") {
-        popup.style.background = "#3CB44B";
+        popup.style.background = "#2878FF";
+        popup.innerHTML = item + " goes in RECYCLING. " + reason;
+        popup.style.display = "block";
+        setTimeout(function() { popup.style.display = "none"; }, 7000);
+      }
+
+      else if (bin === "compost") {
         new Audio("Compost.mp3").play();
-      } else if (result.bin === "E-waste") {
-        popup.style.background = "red";
+        popup.style.background = "#3CB44B";
+        popup.innerHTML = item + " goes in COMPOST. " + reason;
+        popup.style.display = "block";
+        setTimeout(function() { popup.style.display = "none"; }, 7000);
+      }
+
+      else if (bin === "E-waste") {
         new Audio("E-waste.mp3").play();
-      } else {
-        popup.style.background = "#333";
+        popup.style.background = "red";
+        popup.innerHTML = item + " is E-WASTE. " + reason + "<br><br>Finding nearest drop-off...";
+        popup.style.display = "block";
+        setTimeout(function() { popup.style.display = "none"; }, 15000);
+        findDropoff(item, reason);
+      }
+
+      else {
         new Audio("unidentified.mp3").play();
+        popup.style.background = "#333";
+        popup.innerHTML = "Could not identify, please try again!";
+        popup.style.display = "block";
+        setTimeout(function() { popup.style.display = "none"; }, 7000);
       }
-
-      if (result.bin === "unknown") {
-        popup.textContent = "Could not identify, please try again!";
-      } else {
-        popup.textContent = result.item + " goes in " + result.bin.toUpperCase() + ". " + result.reason;
-      }
-
-      popup.style.display = "block";
-
-      setTimeout(function() {
-        popup.style.display = "none";
-      }, 7000);
     }
 
   </script>

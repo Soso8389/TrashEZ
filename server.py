@@ -1,3 +1,5 @@
+import os
+import requests
 from flask import Flask, request
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -80,6 +82,46 @@ Reply ONLY in this JSON format: {"item": "<name>", "bin": "trash|recycling|compo
         result = result.strip()
 
     return result, 200, headers
+
+
+@app.route("/dropoff", methods=["POST", "OPTIONS"])
+def dropoff():
+
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS"
+    }
+
+    if request.method == "OPTIONS":
+        return "", 204, headers
+
+    data = request.get_json()
+    lat = data["lat"]
+    lng = data["lng"]
+
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
+    url = "https://places.googleapis.com/v1/places:searchNearby"
+    body = {
+        "includedTypes": ["recycling_center", "electronics_store"],
+        "maxResultCount": 1,
+        "rankPreference": "DISTANCE",
+        "locationRestriction": {
+            "circle": {
+                "center": {"latitude": lat, "longitude": lng},
+                "radius": 50000
+            }
+        }
+    }
+    api_headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.googleMapsUri"
+    }
+
+    r = requests.post(url, json=body, headers=api_headers)
+    return r.text, 200, headers
 
 
 if __name__ == "__main__":
